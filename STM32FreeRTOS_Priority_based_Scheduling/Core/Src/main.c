@@ -45,11 +45,14 @@
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart2;
 
-osThreadId task1Handle;
-osThreadId task2Handle;
+osThreadId Task1Handle;
+osThreadId Task2Handle;
+osThreadId Task3Handle;
 /* USER CODE BEGIN PV */
 uint8_t task1Data[] = "Task 01 \n";
 uint8_t task2Data[] = "Task 02 \n";
+uint8_t task3Data[] = "Task 03 \n";
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,9 +61,10 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartTask1(void const * argument);
 void StartTask2(void const * argument);
+void StartTask3(void const * argument);
 
 /* USER CODE BEGIN PFP */
-
+void printTaskText(const uint8_t * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -120,13 +124,17 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of task1 */
-  osThreadDef(task1, StartTask1, osPriorityNormal, 0, 128);
-  task1Handle = osThreadCreate(osThread(task1), NULL);
+  /* definition and creation of Task1 */
+  osThreadDef(Task1, StartTask1, osPriorityBelowNormal, 0, 128);
+  Task1Handle = osThreadCreate(osThread(Task1), NULL);
 
-  /* definition and creation of task2 */
-  osThreadDef(task2, StartTask2, osPriorityNormal, 0, 128);
-  task2Handle = osThreadCreate(osThread(task2), NULL);
+  /* definition and creation of Task2 */
+  osThreadDef(Task2, StartTask2, osPriorityNormal, 0, 128);
+  Task2Handle = osThreadCreate(osThread(Task2), NULL);
+
+  /* definition and creation of Task3 */
+  osThreadDef(Task3, StartTask3, osPriorityRealtime, 0, 128);
+  Task3Handle = osThreadCreate(osThread(Task3), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -166,13 +174,14 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
+  RCC_OscInitStruct.MSICalibrationValue = 0;
+  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_MSI;
   RCC_OscInitStruct.PLL.PLLM = 1;
-  RCC_OscInitStruct.PLL.PLLN = 10;
+  RCC_OscInitStruct.PLL.PLLN = 40;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV7;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
@@ -238,31 +247,12 @@ static void MX_USART2_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
 /* USER CODE BEGIN MX_GPIO_Init_1 */
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -276,7 +266,7 @@ void printTaskText(const uint8_t * argument){
 
 /* USER CODE BEGIN Header_StartTask1 */
 /**
-  * @brief  Function implementing the task1 thread.
+  * @brief  Function implementing the Task1 thread.
   * @param  argument: Not used
   * @retval None
   */
@@ -288,18 +278,14 @@ void StartTask1(void const * argument)
   for(;;)
   {
 	printTaskText(task1Data);
-//	printTaskText(task1Data);
-
-
-
-	osDelay(10);
+	osDelay(5);
   }
   /* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartTask2 */
 /**
-* @brief Function implementing the task2 thread.
+* @brief Function implementing the Task2 thread.
 * @param argument: Not used
 * @retval None
 */
@@ -311,11 +297,28 @@ void StartTask2(void const * argument)
   for(;;)
   {
 	printTaskText(task2Data);
-//	printTaskText(task2Data);
-
-	osDelay(7);
+	osDelay(5);
   }
   /* USER CODE END StartTask2 */
+}
+
+/* USER CODE BEGIN Header_StartTask3 */
+/**
+* @brief Function implementing the Task3 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask3 */
+void StartTask3(void const * argument)
+{
+  /* USER CODE BEGIN StartTask3 */
+  /* Infinite loop */
+  for(;;)
+  {
+	printTaskText(task3Data);
+	osDelay(3);
+  }
+  /* USER CODE END StartTask3 */
 }
 
 /**
